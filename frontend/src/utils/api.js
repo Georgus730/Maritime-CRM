@@ -79,6 +79,7 @@ export const sendExpiryNotifications = () => api.post('/api/notifications/expiri
 
 // Seed data
 export const seedDemoData = () => api.post('/api/seed');
+export const registerUser = (data) => api.post('/api/auth/register', data);
 
 export default api;
 

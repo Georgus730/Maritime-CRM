@@ -57,6 +57,29 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
+  const register = async (email, password, full_name) => {
+    const response = await axios.post(`${API_URL}/api/auth/register`, { email, password, full_name });
+    const { access_token, user: userData } = response.data;
+
+    // Set global first
+    localStorage.setItem('maritimecrm_token', access_token);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+
+    // Update state
+    setToken(access_token);
+
+    // Settle React state/useEffect
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Verify
+    await fetchUser(access_token);
+
+    // Final settle for dashboard parallel calls
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    return userData;
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -65,7 +88,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, isAuthenticated: !!user && !loading }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, loading, isAuthenticated: !!user && !loading }}>
       {children}
     </AuthContext.Provider>
   );

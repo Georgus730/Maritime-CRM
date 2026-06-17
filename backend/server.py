@@ -776,7 +776,7 @@ async def seed_demo_data():
     
     # Create admin user
     admin = {
-        "email": "admin@crewcrm.com",
+        "email": "admin@maritimecrm.com",
         "password": hash_password("admin123"),
         "full_name": "System Administrator",
         "role": "admin",
