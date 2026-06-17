@@ -57,14 +57,7 @@ export default function DashboardPage() {
   const [dataLoading, setDataLoading] = useState(true);
   const [sendingNotifications, setSendingNotifications] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (isAuthenticated && !authLoading && !dataLoading) {
-      loadDashboardData();
-    }
-  }, [isAuthenticated, authLoading]);
-
-  const loadDashboardData = async () => {
+  const loadDashboardData = React.useCallback(async () => {
     if (!isAuthenticated || authLoading || dataLoading) {
       return;
     }
@@ -86,7 +79,13 @@ export default function DashboardPage() {
     } finally {
       setDataLoading(false);
     }
-  };
+  }, [authLoading, dataLoading, isAuthenticated, language]);
+
+  useEffect(() => {
+    if (isAuthenticated && !authLoading && !dataLoading) {
+      loadDashboardData();
+    }
+  }, [authLoading, dataLoading, isAuthenticated, loadDashboardData]);
 
   const handleSendNotifications = async () => {
     if (!isAuthenticated || authLoading || sendingNotifications || expiringDocs.length === 0) {

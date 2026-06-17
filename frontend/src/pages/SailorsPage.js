@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getSailors, deleteSailor, createSailor } from '../utils/api';
-import { cn, formatDate, getStatusColor } from '../utils/helpers';
+import { cn, getStatusColor } from '../utils/helpers';
 import { toast } from 'sonner';
 
 const statusOptions = [
@@ -31,11 +31,7 @@ export default function SailorsPage() {
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
   const [showAddModal, setShowAddModal] = useState(false);
 
-  useEffect(() => {
-    loadSailors();
-  }, [statusFilter]);
-
-  const loadSailors = async () => {
+  const loadSailors = React.useCallback(async () => {
     try {
       const params = {};
       if (statusFilter) params.status = statusFilter;
@@ -47,7 +43,14 @@ export default function SailorsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [language, search, statusFilter]);
+
+  useEffect(() => {
+    loadSailors();
+  }, [loadSailors]);
+
+
+
 
   const handleSearch = (e) => {
     e.preventDefault();

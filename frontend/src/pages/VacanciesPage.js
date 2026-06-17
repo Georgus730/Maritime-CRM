@@ -36,9 +36,25 @@ export default function VacanciesPage() {
   const [formData, setFormData] = useState({});
   const [formLoading, setFormLoading] = useState(false);
 
+  const loadData = React.useCallback(async () => {
+    try {
+      const params = statusFilter ? { status: statusFilter } : {};
+      const [vacanciesRes, companiesRes] = await Promise.all([
+        getVacancies(params),
+        getCompanies()
+      ]);
+      setVacancies(vacanciesRes.data);
+      setCompanies(companiesRes.data);
+    } catch (error) {
+      toast.error(language === 'ru' ? 'Ошибка загрузки' : 'Failed to load');
+    } finally {
+      setLoading(false);
+    }
+  }, [language, statusFilter]);
+
   useEffect(() => {
     loadData();
-  }, [statusFilter]);
+  }, [loadData]);
 
   useEffect(() => {
     if (editingVacancy) {
@@ -78,21 +94,6 @@ export default function VacanciesPage() {
     }
   }, [editingVacancy, companies]);
 
-  const loadData = async () => {
-    try {
-      const params = statusFilter ? { status: statusFilter } : {};
-      const [vacanciesRes, companiesRes] = await Promise.all([
-        getVacancies(params),
-        getCompanies()
-      ]);
-      setVacancies(vacanciesRes.data);
-      setCompanies(companiesRes.data);
-    } catch (error) {
-      toast.error(language === 'ru' ? 'Ошибка загрузки' : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
