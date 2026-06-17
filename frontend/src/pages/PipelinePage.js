@@ -35,11 +35,7 @@ export default function PipelinePage() {
   const [selectedVacancy, setSelectedVacancy] = useState('');
   const [editingCard, setEditingCard] = useState(null);
 
-  useEffect(() => {
-    loadData();
-  }, [selectedVacancy]);
-
-  const loadData = async () => {
+  const loadData = React.useCallback(async () => {
     try {
       const params = selectedVacancy ? { vacancy_id: selectedVacancy } : {};
       const [pipelineRes, vacanciesRes, sailorsRes] = await Promise.all([
@@ -55,7 +51,11 @@ export default function PipelinePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [language, selectedVacancy]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const getSailorName = (sailorId) => {
     const sailor = sailors.find(s => s.id === sailorId);

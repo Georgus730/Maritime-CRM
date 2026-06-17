@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
-  FileText,
   Ship,
   User,
   Trash2,
@@ -29,11 +28,8 @@ export default function ContractsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingContract, setEditingContract] = useState(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = React.useCallback(async () => {
+    
     try {
       const [contractsRes, sailorsRes, vacanciesRes] = await Promise.all([
         getContracts(),
@@ -48,7 +44,13 @@ export default function ContractsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [language]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+
 
   const handleDelete = async (id) => {
     if (!window.confirm(t('confirmDelete'))) return;

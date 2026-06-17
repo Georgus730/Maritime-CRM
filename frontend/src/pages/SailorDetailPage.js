@@ -38,11 +38,7 @@ export default function SailorDetailPage() {
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({});
 
-  useEffect(() => {
-    loadSailor();
-  }, [id]);
-
-  const loadSailor = async () => {
+  const loadSailor = React.useCallback(async () => {
     try {
       const response = await getSailor(id);
       setSailor(response.data);
@@ -53,7 +49,11 @@ export default function SailorDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, language, navigate]);
+
+  useEffect(() => {
+    loadSailor();
+  }, [loadSailor]);
 
   const handleSave = async () => {
     try {

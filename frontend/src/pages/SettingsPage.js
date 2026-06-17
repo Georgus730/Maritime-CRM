@@ -37,15 +37,7 @@ export default function SettingsPage() {
 
   const isAdmin = currentUser?.role === 'admin';
 
-  useEffect(() => {
-    if (isAdmin) {
-      loadUsers();
-    } else {
-      setLoading(false);
-    }
-  }, [isAdmin]);
-
-  const loadUsers = async () => {
+  const loadUsers = React.useCallback(async () => {
     try {
       const response = await getUsers();
       setUsers(response.data);
@@ -54,7 +46,15 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [language]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      loadUsers();
+    } else {
+      setLoading(false);
+    }
+  }, [isAdmin, loadUsers]);
 
   const handleDeleteUser = async (userId) => {
     if (userId === currentUser.id) {

@@ -24,11 +24,7 @@ export default function CompaniesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
 
-  useEffect(() => {
-    loadCompanies();
-  }, []);
-
-  const loadCompanies = async () => {
+  const loadCompanies = React.useCallback(async () => {
     try {
       const params = search ? { search } : {};
       const response = await getCompanies(params);
@@ -38,7 +34,11 @@ export default function CompaniesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, language]);
+
+  useEffect(() => {
+    loadCompanies();
+  }, [loadCompanies]);
 
   const handleSearch = (e) => {
     e.preventDefault();
