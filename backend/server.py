@@ -1,6 +1,6 @@
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Query, Header
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, Query, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr, Field
 from pydantic_settings import BaseSettings
 from typing import Optional, List
@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     jwt_expiration_hours: int = int(os.environ.get('JWT_EXPIRATION_HOURS', '24'))
     sendgrid_api_key: str = os.environ.get('SENDGRID_API_KEY', '')
     sender_email: str = os.environ.get('SENDER_EMAIL', '')
+    demo_mode: bool = os.environ.get('DEMO_MODE', 'false').lower() == 'true'
 
 settings = Settings()
 
@@ -294,11 +295,41 @@ def verify_password(plain: str, hashed: str) -> bool:
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
-def get_current_user(token: str = Depends(security)) -> dict:
+def get_current_user(request: Request, token: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+    demo_mode = getattr(settings, 'demo_mode', False)
+    critical_paths = ['/api/users', '/api/settings', '/api/admin']
+
+    # No token provided
     if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        if demo_mode:
+            path = request.url.path
+            # If trying to access critical API paths, require authentication
+            if any(path.startswith(p) for p in critical_paths):
+                raise HTTPException(status_code=401, detail="Not authenticated (demo mode blocks critical paths)")
+            # Otherwise provide a demo guest user so UI works
+            guest_email = "guest@maritimecrm.demo"
+            guest_user = db.users.find_one({"email": guest_email})
+            if not guest_user:
+                guest_dict = {
+                    "email": guest_email,
+                    "full_name": "Guest User",
+                    "password": hash_password("guest_demo_password"),
+                    "role": "manager",
+                    "is_guest": True,
+                    "created_at": datetime.now(timezone.utc)
+                }
+                result = db.users.insert_one(guest_dict)
+                guest_user = db.users.find_one({"_id": result.inserted_id})
+            user_data = serialize_doc(guest_user)
+            if "password" in user_data:
+                del user_data["password"]
+            return user_data
+        else:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Token provided: verify as before
     try:
         payload = jwt.decode(token.credentials, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
         user_id = payload.get("sub")
