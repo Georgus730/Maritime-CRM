@@ -101,6 +101,7 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     created_at: datetime
+    is_guest: bool = False
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -310,6 +311,11 @@ def get_current_user(token: str = Depends(security)) -> dict:
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+def check_guest_access(current_user: dict):
+    """Prevent dangerous operations for guest users"""
+    if current_user.get("is_guest"):
+        raise HTTPException(status_code=403, detail="Guest users cannot perform this action")
+
 def send_email_notification(to_email: str, subject: str, html_content: str):
     if not settings.sendgrid_api_key:
         print(f"SendGrid not configured. Email to {to_email}: {subject}")
@@ -360,6 +366,35 @@ async def login(credentials: UserLogin):
         user=UserResponse(**user_data)
     )
 
+@app.post("/api/auth/guest-login", response_model=TokenResponse)
+async def guest_login():
+    """Guest/Demo login - creates or retrieves a fixed guest user"""
+    guest_email = "guest@maritimecrm.demo"
+    guest_name = "Guest User"
+    
+    # Find or create guest user
+    guest_user = db.users.find_one({"email": guest_email})
+    if not guest_user:
+        guest_dict = {
+            "email": guest_email,
+            "full_name": guest_name,
+            "password": hash_password("guest_demo_password"),
+            "role": "manager",
+            "is_guest": True,
+            "created_at": datetime.now(timezone.utc)
+        }
+        result = db.users.insert_one(guest_dict)
+        guest_user = db.users.find_one({"_id": result.inserted_id})
+    
+    user_data = serialize_doc(guest_user)
+    if "password" in user_data:
+        del user_data["password"]
+    token = create_access_token({"sub": user_data["id"]})
+    return TokenResponse(
+        access_token=token,
+        user=UserResponse(**user_data)
+    )
+
 @app.get("/api/auth/me")
 async def get_me(current_user = Depends(get_current_user)):
     return current_user
@@ -387,6 +422,7 @@ async def create_user(user: UserCreate, current_user = Depends(get_current_user)
 
 @app.delete("/api/users/{user_id}")
 async def delete_user(user_id: str, current_user = Depends(get_current_user)):
+    check_guest_access(current_user)
     if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     result = db.users.delete_one({"_id": ObjectId(user_id)})
@@ -448,6 +484,7 @@ async def update_sailor(sailor_id: str, sailor: SailorUpdate, current_user = Dep
 
 @app.delete("/api/sailors/{sailor_id}")
 async def delete_sailor(sailor_id: str, current_user = Depends(get_current_user)):
+    check_guest_access(current_user)
     result = db.sailors.delete_one({"_id": ObjectId(sailor_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Sailor not found")
@@ -497,6 +534,7 @@ async def update_company(company_id: str, company: CompanyUpdate, current_user =
 
 @app.delete("/api/companies/{company_id}")
 async def delete_company(company_id: str, current_user = Depends(get_current_user)):
+    check_guest_access(current_user)
     result = db.companies.delete_one({"_id": ObjectId(company_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -546,6 +584,7 @@ async def update_vacancy(vacancy_id: str, vacancy: VacancyUpdate, current_user =
 
 @app.delete("/api/vacancies/{vacancy_id}")
 async def delete_vacancy(vacancy_id: str, current_user = Depends(get_current_user)):
+    check_guest_access(current_user)
     result = db.vacancies.delete_one({"_id": ObjectId(vacancy_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Vacancy not found")
@@ -592,6 +631,7 @@ async def update_contract(contract_id: str, contract: ContractUpdate, current_us
 
 @app.delete("/api/contracts/{contract_id}")
 async def delete_contract(contract_id: str, current_user = Depends(get_current_user)):
+    check_guest_access(current_user)
     result = db.contracts.delete_one({"_id": ObjectId(contract_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Contract not found")
@@ -632,6 +672,7 @@ async def update_pipeline(pipeline_id: str, update: PipelineUpdate, current_user
 
 @app.delete("/api/pipeline/{pipeline_id}")
 async def remove_from_pipeline(pipeline_id: str, current_user = Depends(get_current_user)):
+    check_guest_access(current_user)
     result = db.pipeline.delete_one({"_id": ObjectId(pipeline_id)})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Pipeline entry not found")
