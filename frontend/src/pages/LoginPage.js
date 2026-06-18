@@ -22,7 +22,7 @@ export default function LoginPage() {
   const [regError, setRegError] = useState('');
   const [regLoading, setRegLoading] = useState(false);
 
-  const { login, register } = useAuth();
+  const { login, loginAsGuest, register } = useAuth();
   const { t, language, toggleLanguage } = useLanguage();
   const navigate = useNavigate();
 
@@ -87,6 +87,23 @@ export default function LoginPage() {
       toast.error(language === 'ru' ? 'Ошибка загрузки данных' : 'Failed to load data');
     } finally {
       setSeeding(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setError('');
+    setLoading(true);
+    setRedirecting(false);
+
+    try {
+      await loginAsGuest();
+      setRedirecting(true);
+      setTimeout(() => navigate('/'), 500);
+    } catch (err) {
+      setError(language === 'ru' ? 'Ошибка входа как гость' : 'Guest login failed');
+      console.error('Guest login error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -172,7 +189,24 @@ export default function LoginPage() {
                 {redirecting ? (language === 'ru' ? 'Перенаправление...' : 'Redirecting...') : 
                  loading ? (language === 'ru' ? 'Вход...' : 'Signing in...') : t('signIn')}
               </button>
+
+              <button
+                type="button"
+                onClick={handleGuestLogin}
+                disabled={loading || redirecting}
+                className="w-full mt-3 py-3 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="guest-login-btn"
+              >
+                {loading ? (language === 'ru' ? 'Вход...' : 'Signing in...') : 
+                 (language === 'ru' ? 'Войти как гость' : 'Guest Login')}
+              </button>
             </form>
+
+            <p className="text-xs text-slate-500 text-center mt-3">
+              {language === 'ru' 
+                ? 'Гость может просматривать данные, но не может удалять или изменять настройки' 
+                : 'Guest can view data but cannot delete or change settings'}
+            </p>
 
             {/* Registration */}
             <div className="mt-6 pt-6 border-t border-slate-800">
@@ -282,7 +316,7 @@ export default function LoginPage() {
           <div className="mt-4 p-4 bg-slate-900/50 border border-slate-800/50 rounded-md">
             <p className="text-xs text-slate-500 text-center">
               {language === 'ru' ? 'Демо-доступ:' : 'Demo access:'} <br />
-                <span className="font-mono text-slate-400">admin@maritimecrm.com / admin123</span>
+                <span className="font-mono text-slate-400">admin@crewcrm.com / admin123</span>
             </p>
           </div>
         </div>
