@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -17,6 +17,8 @@ import './App.css';
 
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+  const demoMode = process.env.REACT_APP_DEMO_MODE === 'true';
   
   if (loading) {
     return (
@@ -24,6 +26,15 @@ const PrivateRoute = ({ children }) => {
         <div className="text-primary text-xl">Загрузка...</div>
       </div>
     );
+  }
+
+  // If demo mode is enabled, allow access to non-critical routes without login
+  if (demoMode) {
+    const criticalPaths = ['/settings', '/admin'];
+    if (criticalPaths.some(p => location.pathname.startsWith(p))) {
+      return isAuthenticated ? children : <Navigate to="/login" />;
+    }
+    return children; // allow access to most routes in demo mode
   }
   
   return isAuthenticated ? children : <Navigate to="/login" />;
